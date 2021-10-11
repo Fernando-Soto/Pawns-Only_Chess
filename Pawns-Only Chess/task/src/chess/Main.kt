@@ -11,11 +11,11 @@ private var activePlayer = firstPlayer
 
 private val cb = mutableListOf(
     mutableListOf(" ", " ", " ", " ", " ", " ", " ", " "),
-    mutableListOf("W", "W", "W", "W", "W", "W", "W", "W"),
+    mutableListOf("W", "W", "W", " ", "W", "W", "W", "W"),
     mutableListOf(" ", " ", " ", " ", " ", " ", " ", " "),
     mutableListOf(" ", " ", " ", " ", " ", " ", " ", " "),
     mutableListOf(" ", " ", " ", " ", " ", " ", " ", " "),
-    mutableListOf(" ", " ", " ", " ", " ", " ", " ", " "),
+    mutableListOf(" ", " ", " ", "W", " ", " ", " ", " "),
     mutableListOf("B", "B", "B", "B", "B", "B", "B", "B"),
     mutableListOf(" ", " ", " ", " ", " ", " ", " ", " "),
 )
@@ -110,6 +110,30 @@ private fun isForwardValid(locations: CellLocations): Boolean {
             (cb[locations.toRow][locations.toCol] == " ")
 }
 
+private fun tryPawnCaptures(move: String): Message {
+    val correctLocation = correctMoveIndex(move)
+    // Message object is correct color if returnValue is true and invalid if false.
+    // if false send message to the console
+    val startColor = isStartColorCorrect(correctLocation, move)
+    if (!startColor.returnValue) {
+        println(startColor.message)
+        return startColor
+    }
+    if (correctLocation.toCol == correctLocation.fromCol) return Message(false, "Not A Pawn Capture")
+    if (activePlayer == firstPlayer) {
+        if (cb[correctLocation.toRow][correctLocation.toCol] != "B") return Message(false, "No Pawn at Location $move")
+        cb[correctLocation.toRow][correctLocation.toCol] = "W"
+        cb[correctLocation.fromRow][correctLocation.fromCol] = " "
+        return startColor
+    }
+    else {
+        if (cb[correctLocation.toRow][correctLocation.toCol] != "W") return Message(false, "No Pawn at Location $move")
+        cb[correctLocation.toRow][correctLocation.toCol] = "B"
+        cb[correctLocation.fromRow][correctLocation.fromCol] = " "
+        return startColor
+    }
+}
+
 private fun moveForward(move: String): Message {
     // Convert the user input to correct cells because board start index
     // is 1 and not zero as the array does.
@@ -121,6 +145,7 @@ private fun moveForward(move: String): Message {
         println(startColor.message)
         return startColor
     }
+
     if (activePlayer == firstPlayer && isForwardValid(correctLocation)) {
         return if (correctLocation.fromRow == 1 &&
             correctLocation.toRow - correctLocation.fromRow == 2) {
@@ -153,6 +178,11 @@ private fun moveForward(move: String): Message {
     }
 }
 
+private fun doEndProcess() {
+    printChessboard()
+    switchPlayer()
+}
+
 fun main() {
     println(" Pawns-Only Chess")
     getUsersNames()
@@ -161,9 +191,11 @@ fun main() {
         val result = getPlayersMove(activePlayer)
         // If result != to exit then at this point the coordinates of the move is valid
         if (result == "exit")  break
-        if (!moveForward(result).returnValue) continue
-        printChessboard()
-        switchPlayer()
+        when {
+            tryPawnCaptures(result).returnValue -> doEndProcess()
+            moveForward(result).returnValue -> doEndProcess()
+            else -> continue
+        }
     }
     println("Bye!")
 }
